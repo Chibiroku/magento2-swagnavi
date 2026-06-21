@@ -1,0 +1,13 @@
+RewriteEngine on
+
+# Add this rule FIRST - before the existing catch-all rule
+RewriteRule ^static/(.*)$ /pub/static/$1 [L]
+
+# Your existing rules continue here
+RewriteCond %{REQUEST_URI} !^/pub/
+RewriteCond %{REQUEST_URI} !^/setup/
+RewriteCond %{REQUEST_URI} !^/update/
+RewriteCond %{REQUEST_URI} !^/dev/
+RewriteRule .* /pub/$0 [L]
+
+DirectoryIndex index.php

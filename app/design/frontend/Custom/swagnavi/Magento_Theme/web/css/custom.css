@@ -1,0 +1,81 @@
+
+a{
+	font-size: 14px;
+        text-decoration: none;
+}
+span {
+    font-size: 15px;
+}
+span.base {
+    font-size: 33px;
+}
+select.swatch-select.size {
+    font-size: 15px;
+}
+
+img.braintree-credit-card-selected {
+    height: 30px;
+}
+.opc-wrapper .fieldset > .field:not(.choice) > .control {
+    clear: none;
+}
+/*a.action.advanced {
+    color: #e67e22;
+}*/
+
+/* you have no items in your with list on the right side */
+.empty {
+    font-size: small;
+}
+/* drop down selectors */
+select#sorter {
+    font-size: small;
+}
+.control {
+    font-size: small;
+}
+/* product display */
+.product.attribute.sku {
+    font-size: medium;
+}
+a.action.multicheckout {
+    display: none;
+}
+/* shipping method */
+td.col.col-method {
+    font-size: small;
+}
+td.col.col-carrier {
+    font-size: small;
+}
+/* button next from the store pick */
+.primary {
+    padding-right: 20px;
+}
+/* pickup store selection */
+p.location-address {
+    font-size: medium;
+}
+p.location-description {
+    font-size: medium;
+}
+/* Shopping Cart */
+tr.totals.sub {
+    font-size: medium;
+}
+th.mark {
+    font-size: medium;
+}
+a.action.action-edit {
+    display: none !important;
+}
+
+.billing-address-details {
+    font-size: medium;
+}
+.payment-method-note {
+    font-size: medium;
+}
+
+/*div#switcher-store { display: none !important;
+}*/

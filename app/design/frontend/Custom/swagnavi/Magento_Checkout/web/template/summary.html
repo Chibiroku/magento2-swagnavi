@@ -1,0 +1,31 @@
+<!--
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+-->
+<div class="opc-block-summary" data-bind="blockLoader: isLoading">
+    <span data-bind="i18n: 'Order Summary'" class="title"></span>
+    <!-- ko foreach: elems() -->
+        <!-- ko template: getTemplate() --><!-- /ko -->
+    <!-- /ko -->
+</div>
+<div class="opc-highlight">
+ <h2>Attention</h2>   
+
+<p class="red">Please Note:  Items are not refundable even for size changes.</p>
+</div>
+<style>
+    .opc-highlight
+    {
+        background: #f5f5f5;
+        padding: 22px 30px;
+         margin: 0 0 20px;
+    }
+.red {
+    color:red;
+    font-size:15px;
+    font-weight:500;
+
+}
+    </style>

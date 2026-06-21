@@ -1,0 +1,194 @@
+SWAGNAVI SERVER - SECURITY INCIDENT NOTES & HANDOVER
+=====================================================
+Server: Swagnavi (EC2 i-0b8b6b577a0269627, private IP 172.31.20.100)
+Sites served: swagnavi.com, dsstfalcons.swagnavi.com, lhmb.swagnavi.com
+Last updated: 2026-06-20 (afternoon update added section 1b: root-cause vulnerability found and patched)
+
+This file is a plain-text handover for staff and anyone taking over
+administration of this server. It is NOT on the public web path
+(it sits at the Magento root, one level above pub/, which is the
+actual document root) - safe to keep here, but do not move it into
+pub/ or any web-accessible directory.
+
+-----------------------------------------------------------------
+1. WHAT HAPPENED (root cause)
+-----------------------------------------------------------------
+Approximately 2 years prior to discovery (incident found ~2026-06-17),
+an attacker exploited Magento's well-known "Custom Options" arbitrary
+PHP file upload vulnerability. This let them drop PHP web shells into:
+
+    pub/media/custom_options/quote/
+
+From there they escalated to root via a misconfigured account,
+sftp_user: SSH password authentication was enabled for that account
+AND it was a member of the sudo group. Once they had a shell upload
+path plus a root-capable account with a guessable/leaked password,
+they had full control of the server.
+
+A related, separate Magento server (customembellishment.com/.net,
+different EC2 instance) was compromised via the exact same method
+around the same time. The two are unrelated businesses but were
+hosted/configured similarly, which is why both were hit.
+
+What the attacker did with access:
+  - Installed a disguised root cron job (/etc/cron.d/fwupd-refresh,
+    named to look like a legitimate system file) that periodically
+    pulled and ran remote shell code from gsocks.io (a known
+    SOCKS-proxy/proxyjacking C2 domain).
+  - Ran two backdoor binaries (/usr/bin/backup and /usr/bin/polkitd)
+    disguised as kernel threads ([rcu_sched], [slub_flushwq]) to
+    monetize the server's bandwidth/IP as a SOCKS proxy.
+  - Left thousands of PHP web shells in the custom_options/quote
+    upload directory, including files disguised as images (valid
+    PNG/GIF/JPEG headers with embedded PHP payloads) to evade naive
+    "check the file extension" filtering.
+  - Created/used a rogue Magento admin account ("magehq", believed
+    tied to a former IT consultant).
+  - Left defacement pages ("Hacked by Segawon.Id") and exploit-probe
+    files scattered in the same upload directory.
+
+-----------------------------------------------------------------
+2. WHAT WAS FOUND AND FIXED (as of 2026-06-20)
+-----------------------------------------------------------------
+- Cron persistence and the two proxyjacking binaries: confirmed
+  removed. Verified no disguised processes remain (checked every
+  kernel-thread-style process name against /proc/<pid>/exe).
+- sftp_user: removed from the sudo group; password rotated; SSH
+  config no longer allows password login for this account (it was
+  previously overridden per-user to allow it despite the global
+  setting being "no" - that override is now removed); converted to
+  SSH key-only authentication, still restricted to SFTP only (no
+  shell access, ForceCommand internal-sftp + chroot). This account
+  IS used legitimately for the ongoing product catalog import
+  pipeline (DSST/School-Gear), so it was reconfigured rather than
+  disabled outright.
+- custom_options/quote/ directory: turned out to be 100% compromised
+  - every single file in it traced back to the attacker, including
+  ones disguised as ordinary images. All malicious/disguised files
+  (2,266 total) were moved to a quarantine location
+  (/var/quarantine/custom_options_quote_20260620/, permissions
+  locked down to root-only, not web-accessible) rather than
+  permanently deleted, in case anything needs to be recovered later.
+  PHP execution in that directory is independently blocked at the
+  Apache level (confirmed via live testing), so even if something
+  was missed there it cannot currently execute.
+- Linux Malware Detect (maldet): was installed but its real-time
+  monitor service had been silently broken (failed to start) since
+  2026-04-10 due to a missing dependency. Fixed and confirmed
+  running. Daily automated scans continue as before.
+- Rogue Magento admin account "magehq": confirmed not present.
+- All Magento admin panel passwords (admin, swagnavi, chi accounts)
+  rotated. New passwords are not stored in this file - check with
+  whoever ran the rotation (Chi) or the password manager/notes used
+  at the time.
+- An EC2 AMI snapshot was taken (ami-07aa3eeac88759be5) as a
+  rollback safety net reflecting the post-cleanup state, since the
+  previous AMIs on file predated this incident entirely (from 2024).
+
+-----------------------------------------------------------------
+3. BACKUP CONFIGURATION (also reviewed/fixed 2026-06-20)
+-----------------------------------------------------------------
+Scripts: /etc/cron.daily/magento_daily_backup (DB only, runs daily
+06:00) and /etc/cron.weekly/magento_weekly_backup (full code + DB,
+runs Sundays 06:00). Both upload to Google Drive via rclone.
+
+Retention (current, corrected):
+  Local DB backups:          7 days   (/var/www/html/backup/dbbackup)
+  Local code archives:       30 days  (/var/www/html/backup)
+  Off-site DB backups:       30 days  (Google Drive, dbbackup folder)
+  Off-site code archives:    90 days  (Google Drive, root folder)
+
+A bug was found and fixed where the daily script's cleanup step was
+accidentally also deleting the weekly script's code archives after
+just 7 days (it was supposed to leave them for 30) because both
+scripts' cleanup pointed at the same shared folder. This is now
+fixed - each script only prunes its own backup type.
+
+Off-site (Google Drive) backups had never been pruned at all before
+this fix - they were growing forever. Pruning is now active there
+too, at the retention periods listed above.
+
+Known minor issue, not yet fixed: both backup scripts use the same
+lock file name. If their schedules ever overlap, one would silently
+skip its run. Low risk as currently scheduled, but worth giving the
+daily script its own lock file if schedules ever change.
+
+-----------------------------------------------------------------
+4. WHAT TO WATCH GOING FORWARD
+-----------------------------------------------------------------
+- maldet sends daily scan reports by email; keep an eye on those for
+  any new hits.
+- If sftp_user's SFTP access ever stops working for the catalog
+  import process, it's because it now requires an SSH key instead of
+  a password - the key was issued directly to Chi.
+- The quarantined files at /var/quarantine/custom_options_quote_20260620/
+  can be permanently deleted once nobody needs to refer back to them
+  (e.g. for a forensic review or insurance claim).
+- If you're auditing this server again later, don't assume anything
+  in this file is still accurate without re-checking - re-verify
+  live rather than trusting old notes, the same way this round of
+  cleanup didn't just trust the previous one.
+
+-----------------------------------------------------------------
+1b. ROOT-CAUSE VULNERABILITY FOUND AND PATCHED (2026-06-20 afternoon)
+-----------------------------------------------------------------
+The morning remediation above (section 2) cleaned up the attacker's
+existing footprint, but did not yet identify how the attacker got their
+files onto the server in the first place. That was found and FIXED this
+same afternoon:
+
+Exploit chain (reconstructed from Apache access logs):
+  1. Unauthenticated POST /rest/V1/guest-carts (creates a guest cart)
+  2. POST /rest/V1/guest-carts/{cartId}/items with a forged custom-option
+     payload: option_value set to "file", plus extension_attributes.
+     file_info containing an attacker-chosen filename, base64 data, and
+     mime type.
+  3. Magento returns HTTP 400 (the cart-item validation fails) - but the
+     file gets written to disk anyway, because the write happens earlier
+     in the call chain than the validation that rejects the request.
+
+Root cause in Magento core:
+  vendor/magento/module-catalog/Model/CustomOptions/CustomOption.php,
+  method getOptionValue() - trusts the client-supplied option_value ==
+  'file' flag and processes the file with NO check that the targeted
+  option_id is actually configured as a file-type option for that
+  product. Confirmed via direct DB query that this catalog has ZERO
+  file-type options configured anywhere (only "area" and "drop_down"
+  types exist) - so this kind of request should always have been
+  rejected, but nothing was checking.
+
+Fix deployed: new custom module SwagNavi_FileOptionGuard
+  (app/code/SwagNavi/FileOptionGuard/) - a plugin on CustomOption that
+  validates the option_id against the live catalog_product_option table
+  before allowing any file to be processed; throws a LocalizedException
+  otherwise. This is a plugin, not a core file edit, so it survives
+  Magento upgrades. If a real file-type option is ever legitimately
+  added to the catalog later, it will validate correctly instead of
+  blocking everything.
+
+Verified live against production: replayed the exact exploit pattern
+  (forged option_id, option_value=file) - blocked, zero files written.
+  Confirmed normal checkout still works (plain simple-product add-to-
+  cart), and the one legitimate option type actually in use (area/
+  textarea, e.g. product "purchased-apparel-2") still works correctly
+  end-to-end.
+
+Current status (verified 2026-06-20): module confirmed enabled
+  (bin/magento module:status SwagNavi_FileOptionGuard), quote/ directory
+  confirmed at 0 files (no new shells landing).
+
+STILL OPEN as of this update - do not consider this incident fully
+closed yet:
+  - The EC2 AMI snapshot on file (ami-07aa3eeac88759be5) PREDATES this
+    fix - a rollback to that AMI today would restore the server to a
+    VULNERABLE state. A fresh snapshot should be taken once the items
+    below are wrapped up.
+  - The monthly automated health-check script
+    (/usr/local/sbin/swagnavi_monthly_security_check.sh) exists but is
+    NOT yet wired into cron - nothing is currently automatically
+    watching for a regression of any of this.
+  - The 2,266 quarantined files at
+    /var/quarantine/custom_options_quote_20260620/ (plus one followup
+    file from the live exploit replay test) are still sitting there,
+    chmod 000 - no decision yet on permanent deletion vs. keeping for
+    forensics/insurance.

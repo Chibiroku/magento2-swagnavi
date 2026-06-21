@@ -1,0 +1,16 @@
+/vendor/
+/generated/
+/var/*
+!/var/.htaccess
+/pub/media/*
+!/pub/media/.htaccess
+/pub/static/*
+!/pub/static/.htaccess
+/pub/sitemap/
+/app/etc/env.php
+/app/etc/config.php.bak
+.idea/
+.vscode/
+*.log
+node_modules/
+.DS_Store

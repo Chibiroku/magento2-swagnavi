@@ -1,0 +1,33 @@
+<?php
+/** @var $block \SwagNavi\EmailThumbnail\Block\Email\Items\Order\DefaultOrder */
+?>
+
+<tr>
+    <!-- PRODUCT INFO (thumbnail + name + sku) -->
+    <td class="item-info" style="padding: 10px 0;">
+        <?php if ($block->getProductThumbnailUrl()): ?>
+            <img src="<?php echo $block->escapeUrl($block->getProductThumbnailUrl()); ?>"
+                 width="100" height="100"
+                 style="display:inline-block; margin-right:10px; vertical-align:middle; border:1px solid #ddd;">
+        <?php endif; ?>
+
+        <span style="display:inline-block; vertical-align:middle;">
+            <?php echo $block->escapeHtml($block->getItem()->getName()); ?>
+            <br>
+            <span style="font-size:12px; color:#888;">
+                SKU: <?php echo $block->escapeHtml($block->getItem()->getSku()); ?>
+            </span>
+        </span>
+    </td>
+
+    <!-- QTY -->
+    <td class="item-qty" style="text-align:center; vertical-align:middle;">
+        <?php echo $block->escapeHtml($block->getItem()->getQtyOrdered()); ?>
+    </td>
+
+    <!-- SUBTOTAL -->
+    <td class="item-subtotal" style="text-align:right; vertical-align:middle;">
+        <?php echo $block->getOrder()->formatPrice($block->getItem()->getRowTotal()); ?>
+    </td>
+</tr>
+

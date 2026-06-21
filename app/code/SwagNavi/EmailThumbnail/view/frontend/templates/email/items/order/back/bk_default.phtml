@@ -1,0 +1,19 @@
+<?php
+/** @var $block \SwagNavi\EmailThumbnail\Block\Email\Items\Order\DefaultOrder */
+?>
+
+
+<tr>
+    <td class="item-info">
+        <?php if ($block->getProductThumbnailUrl()): ?>
+            <img src="<?php echo $block->escapeUrl($block->getProductThumbnailUrl()); ?>"
+                 width="60" height="60"
+                 style="display:block; margin-right:10px; vertical-align:middle; border:1px solid #ddd;">
+        <?php endif; ?>
+
+        <span style="vertical-align:middle;">
+            <?php echo $block->escapeHtml($block->getItem()->getName()); ?>
+
+        </span>
+    </td>
+</tr>

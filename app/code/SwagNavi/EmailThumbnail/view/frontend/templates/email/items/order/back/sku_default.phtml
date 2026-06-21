@@ -1,0 +1,23 @@
+<?php
+/** @var $block \SwagNavi\EmailThumbnail\Block\Email\Items\Order\DefaultOrder */
+?>
+
+
+<tr>
+    <td class="item-info" style="padding: 10px 0;">
+        <?php if ($block->getProductThumbnailUrl()): ?>
+            <img src="<?php echo $block->escapeUrl($block->getProductThumbnailUrl()); ?>"
+                 height="100"
+                 style="display:inline-block; margin-right:10px; vertical-align:middle; border:1px solid #ddd;">
+        <?php endif; ?>
+
+        <span style="display:inline-block; vertical-align:middle;">
+            <?php echo $block->escapeHtml($block->getItem()->getName()); ?>
+	    <br>
+	   <span style="font-size:12px; color:#888;">
+		SKU: <?php echo $block->escapeHtml($block->getItem()->getSku()); ?>
+	   </span>
+
+        </span>
+    </td>
+</tr>
