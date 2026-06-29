@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="Magento\Csp\Model\SubresourceIntegrityRepository">
+        <plugin name="swagnavi_csp_sri_repo_lock" type="SwagNavi\CspSriFix\Plugin\LockSriRepositoryWrites" sortOrder="10"/>
+    </type>
+</config>
